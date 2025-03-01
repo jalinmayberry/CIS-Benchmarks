@@ -13,7 +13,7 @@ Welcome to the system hardening lab. This lab will guide you through the process
 
 Equipment Needed:
 
-- **A RHEL 9 Host Machine or VM**
+- **A RHEL 9 Host Machine or VM with approximately 2 CPU cores, 4GB of RAM, and 20GB of Storage Space**
     - Installation Manager Configurations listed below:
   
     ![image](https://github.com/user-attachments/assets/69729a0c-d51c-4fab-add8-fc7845d201c1)
