@@ -11,15 +11,14 @@ Welcome to the system hardening lab. This lab will guide you through the process
 
 # Prerequisites
 
-Equipment Needed:
-
-- **A RHEL 9 Host Machine or VM with approximately 2 CPU cores, 4GB of RAM, and 20GB of Storage Space**
+- **A RHEL 9 Host Machine or VM with approximately 2 CPU cores, 4GB of RAM, and 20GB of storage space**
     - Installation Manager Configurations listed below:
   
     ![image](https://github.com/user-attachments/assets/69729a0c-d51c-4fab-add8-fc7845d201c1)
 
     ![image.png](https://github.com/user-attachments/assets/343ed528-c23a-485b-98ed-3089b546575c)
-    
+
+- **Some familiarization of the Red Hat Enterprise Linux command line**    
 
 Before applying CIS hardening, ensure the following requirements are met:
 
@@ -45,6 +44,12 @@ Ensure `ansible.posix` and `community.general` collections are installed:
 ansible-galaxy collection install ansible.posix community.general
 ```
 
+- **ansible.posix** → Used for POSIX-compliant tasks (e.g., sysctl, managing users/groups, file permissions).
+
+- **community.general** → Contains hundreds of modules for system administration, including lineinfile, ini_file, firewalld, and more.
+
+📌 Purpose: Required for running CIS remediation playbooks that modify system settings.
+
 *NOTE: If you encounter “ini_file” or “systctl” related errors when running the Ansible playbook, these collections should resolve it.*
 
 ### **3️⃣ Ensure Python 3 is Installed and Used**
@@ -69,6 +74,11 @@ The following packages must be installed for CIS hardening:
 ```
 sudo dnf install -y audit audit-libs auditd aide policycoreutils-python-utils
 ```
+- audit → Audit daemon and tools.
+- audit-libs → Libraries supporting the audit system.
+- auditd → Audit daemon, responsible for event logging.
+- aide → Advanced Intrusion Detection Environment, used for file integrity monitoring.
+- policycoreutils-python-utils → SELinux policy management utilities.
 
 *NOTE: auditd might flag an error, if so just ensure it is enabled in the next step*
 
@@ -77,6 +87,14 @@ Additionally, ensure services like `auditd` are enabled:
 ```
 sudo systemctl enable --now auditd
 ```
+
+- Ensures the audit daemon (auditd) starts on boot and runs immediately.
+
+📌 Purpose: auditd is responsible for logging security events like failed logins, system changes, and unauthorized access.
+
+
+*NOTE: If auditd is already running, this command ensures it remains enabled.*
+
 
 ### **Modify `/etc/audit/audit.rules` for Compliance**
 
@@ -93,6 +111,12 @@ echo '-w /var/log/sudo.log -p wa -k actions' | sudo tee -a /etc/audit/rules.d/au
 sudo auditctl -R /etc/audit/rules.d/audit.rules
 ```
 
+- -w /var/log/sudo.log → Watches the sudo log for any modifications.
+- -p wa → Triggers audit logs when the file is written to (w) or accessed (a).
+- -k actions → Assigns a keyword (actions) for easier search and filtering.
+- auditctl -R → Reloads the new rules without a system reboot.
+
+
 ### **Modify `/etc/security/limits.conf` for User Restrictions**
 
 Ensure CIS-recommended settings are present:*
@@ -101,12 +125,25 @@ Ensure CIS-recommended settings are present:*
 echo '* hard core 0' | sudo tee -a /etc/security/limits.conf
 ```
 
+- * → Applies to all users.
+- hard → Enforces a hard limit (cannot be overridden).
+- core 0 → Disables core dumps, preventing sensitive data from being stored if a program crashes.
+
+
 ### **Ensure Sysctl Kernel Parameters Are Configured**
 
 ```
 echo 'net.ipv6.conf.all.accept_ra = 0' | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
+- echo 'net.ipv6.conf.all.accept_ra = 0'
+    - Prints the configuration (net.ipv6.conf.all.accept_ra = 0) to standard output.
+    - This disables IPv6 Router Advertisements, preventing the system from accepting automatic routes, which can be a security risk.
+- | (Pipe Symbol)
+    - Redirects the output of the echo command as input to another command.
+- sudo tee -a /etc/sysctl.conf
+    - tee → Reads from standard input (echo) and writes the output to a file.
+    - -a (Append mode) → Adds the new setting to the end of /etc/sysctl.conf without overwriting existing configurations.
 
 ![image 2](https://github.com/user-attachments/assets/3536bec1-c916-4875-894b-44c988049fbd) ![image 3](https://github.com/user-attachments/assets/04690081-df1e-4de1-9ada-eb64221c6ec8)
 
@@ -174,12 +211,10 @@ sudo oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_cis_server_
 
 ```
 
-We will be using the server profiles for this lab:
-
 🔹 **Outputs:**
 
 - **Audit report:** `rhe9-cis-l1-report.html`
-- **Results file:** `rhel9-cis-l1-results.xml`
+- **Results file:** `rhel9-cis-l1-report.xml`
 
 ### **3. Review the Report**
 
@@ -228,7 +263,7 @@ your_host_ip  ansible_connection=local
 
 ```
 
-### 2. Run the playbook targeting [`localhost`](http://localhost) in Dry-Run Mode: **(Check for Issues)**
+### 2. Run the playbook in Dry-Run Mode: **(Check for Issues)**
 
 ```bash
 ansible-playbook -i inventory.ini rhel9-cis-l1-fix.yml --check
@@ -258,7 +293,7 @@ ansible-playbook -i inventory.ini rhel9-cis-l1-fix.yml --limit "webserver1,webse
 CRITICAL:* 
 
 - *After the completion of the playbook, you will not be able to access the root user via SSH any further,*
-- *You might also get locked out of  root and non-root users due to tightened password policies. Use this [**GUIDE**](https://www.notion.so/CIS-Benchmark-Procedure-RHEL-9-1a7391617bd2802ab104d82606371ab8?pvs=21) if necessary to reset expired passwords*
+- *You might also get locked out of non-root users due to tightened password policies. Use this [**GUIDE**](https://www.notion.so/CIS-Benchmark-Procedure-RHEL-9-1a7391617bd2802ab104d82606371ab8?pvs=21) if necessary to reset expired passwords*
 - If using port essential services (i.e Splunk Web) exist on the machine, you will temporarily lose access due to the installation of firewalld and restriction of loopback traffic.
     - Use the following commands to restore necessary ports
     
